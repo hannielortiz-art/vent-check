@@ -322,7 +322,7 @@ details.tb summary:focus-visible { outline: 3px solid var(--accent); outline-off
     </ol>
   </section>
 
-  <p class="foot">The flags are prompts to tell RT and the provider, not orders. Your unit's protocols, the provider's orders and RT's assessment decide what changes. Nothing you type here is saved or sent anywhere. Version 2026-10-31.1.</p>
+  <p class="foot">The flags are prompts to tell RT and the provider, not orders. Your unit's protocols, the provider's orders and RT's assessment decide what changes. Nothing you type here is saved or sent anywhere. Version 2026-10-31.2. <span id="offlineState"></span></p>
 </div>
 
 <script>
@@ -579,10 +579,17 @@ details.tb summary:focus-visible { outline: 3px solid var(--accent); outline-off
 </script>
 
 <script>
-  // Offline support: save the app on the phone the first time it loads.
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
-  }
+  // Offline support: save the app on the phone the first time it loads, and say when it's ready.
+  (function () {
+    var el = document.getElementById("offlineState");
+    function say(t) { if (el) el.textContent = t; }
+    if (!("serviceWorker" in navigator)) { say("Offline use isn't available in this browser."); return; }
+    say("Saving for offline use…");
+    navigator.serviceWorker.register("sw.js").then(function () { return navigator.serviceWorker.ready; })
+      .then(function () { return caches.has("vent-check-2026-10-31.2"); })
+      .then(function (ok) { say(ok ? "Ready offline ✓" : "Saving for offline use… reopen the app in a few seconds."); })
+      .catch(function () { say("Couldn't save for offline use. Open the app once more while online."); });
+  })();
 </script>
 </body>
 </html>
