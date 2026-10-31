@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vent Check</title>
+<meta name="description" content="Bedside ventilator check: PBW and mL/kg, pressures, compliance, P/F and S/F, gas, tube, SAT/SBT readiness and when to tell RT and the provider.">
+<meta name="application-name" content="Vent Check">
+<meta name="apple-mobile-web-app-title" content="Vent Check">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#13325C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<style>
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-style: normal; font-display: swap; src: url("atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-style: normal; font-display: swap; src: url("atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("barlow-semi-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("barlow-semi-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-style: normal; font-display: swap; src: url("ibm-plex-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 600; font-style: normal; font-display: swap; src: url("ibm-plex-mono-latin-600-normal.woff2") format("woff2"); }
+/* base reset (the artifact viewer used to supply this) */
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-size: 14px; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<style>
+/* Layout: one phone-width column, like a vent screen: inputs and their readouts in the same panel, escalation summary pinned at the top. */
+:root {
+  --navy: #13325C;
+  --bg: #F3F5F8;
+  --panel: #FFFFFF;
+  --ink: #15202E;
+  --muted: #5A6778;
+  --line: #D8DEE7;
+  --field: #F7F9FC;
+  --accent: #13325C;
+  --ruler: #F2C14E;
+  --ok: #1D7A4E;   --ok-bg: #E4F3EB;
+  --watch: #8A5A00; --watch-bg: #FDF1D6;
+  --tell: #B42318; --tell-bg: #FDE7E5;
+  --info-bg: #EEF2F7;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0D1520; --panel: #15202E; --ink: #E7ECF3; --muted: #9AA8BA; --line: #2A394C; --field: #0F1925;
+  --accent: #8FB4E8; --ok: #6FD3A0; --ok-bg: #12301F; --watch: #F2C14E; --watch-bg: #33280C;
+  --tell: #FF8A80; --tell-bg: #3A1614; --info-bg: #1B2838; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0D1520; --panel: #15202E; --ink: #E7ECF3; --muted: #9AA8BA; --line: #2A394C; --field: #0F1925;
+  --accent: #8FB4E8; --ok: #6FD3A0; --ok-bg: #12301F; --watch: #F2C14E; --watch-bg: #33280C;
+  --tell: #FF8A80; --tell-bg: #3A1614; --info-bg: #1B2838; color-scheme: dark }
+
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+.grp { display: flex; align-items: center; gap: 8px; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; min-height: 44px; }
+.check input { width: 22px; height: 22px; accent-color: var(--navy); }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--navy); }
+.wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 40px; display: grid; gap: 14px; }
+
+header.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--navy); color: #FFFFFF;
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; align-items: center; gap: 12px; }
+header.bar img { width: 34px; height: 34px; border-radius: 8px; flex: none; }
+header.bar h1 { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .02em; margin: 0; line-height: 1.1; }
+header.bar p { margin: 0; font-size: 12.5px; color: #C9D6EA; }
+header.bar .spacer { flex: 1; }
+header.bar button { background: transparent; color: #FFFFFF; border: 1px solid #5B79A6; border-radius: 8px; padding: 7px 12px; font: 600 14px var(--font-body); cursor: pointer; }
+header.bar button:focus-visible { outline: 3px solid var(--ruler); outline-offset: 2px; }
+
+.example { font-size: 13.5px; color: var(--watch); background: var(--watch-bg); border-radius: 8px; padding: 8px 12px; }
+
+/* DOPE: the emergency block stays visible above everything else */
+.dope { background: var(--tell-bg); border: 2px solid var(--tell); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.dope h2 { margin: 0; font-family: var(--font-display); font-size: 19px; color: var(--tell); letter-spacing: .02em; text-wrap: balance; }
+.dope .act { margin: 0; font-weight: 700; }
+.dope dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 14.5px; }
+.dope dt { font-family: var(--font-num); font-weight: 600; color: var(--tell); }
+.dope dd { margin: 0; min-width: 0; }
+
+/* Escalation summary */
+.summary { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.summary h2 { margin: 0; font-family: var(--font-display); font-size: 17px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.summary ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.summary li { display: flex; gap: 8px; align-items: baseline; font-size: 15px; }
+.summary .none { color: var(--ok); font-weight: 700; }
+
+section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 12px; }
+section.panel > h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); display: flex; align-items: baseline; gap: 8px; }
+section.panel > h2 small { font-family: var(--font-body); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--muted); }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; color: var(--muted); font-weight: 700; }
+.field label .u { font-weight: 400; }
+.field input { width: 100%; box-sizing: border-box; font: 600 20px var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--field);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 46px; }
+.field input:focus { outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.field.opt label::after { content: " · optional"; font-weight: 400; }
+.pair { display: flex; gap: 8px; }
+.pair input { min-width: 0; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--field); }
+.seg button { border: 0; background: transparent; color: var(--ink); font: 700 15px var(--font-body); padding: 9px 16px; min-height: 44px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--navy); color: #FFFFFF; }
+.seg button:focus-visible { outline: 3px solid var(--ruler); outline-offset: -3px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.row .lbl { font-size: 13px; color: var(--muted); font-weight: 700; }
+
+/* Readouts */
+.out { display: grid; gap: 8px; }
+.chk { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-radius: 10px; background: var(--info-bg); border-left: 5px solid var(--line); }
+.chk .name { font-weight: 700; font-size: 14.5px; min-width: 0; }
+.chk .val { font: 600 18px var(--font-num); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.chk .msg { grid-column: 1 / -1; font-size: 14px; color: var(--ink); }
+.chk.ok { background: var(--ok-bg); border-left-color: var(--ok); }
+.chk.watch { background: var(--watch-bg); border-left-color: var(--watch); }
+.chk.tell { background: var(--tell-bg); border-left-color: var(--tell); }
+.pill { display: inline-block; font: 700 11.5px var(--font-body); text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { color: var(--ok); border: 1.5px solid var(--ok); }
+.pill.watch { color: var(--watch); border: 1.5px solid var(--watch); }
+.pill.tell { color: var(--tell); border: 1.5px solid var(--tell); }
+.pill.info { color: var(--muted); border: 1.5px solid var(--muted); }
+.formula { font-size: 13px; color: var(--muted); }
+.formula code { font-family: var(--font-num); font-size: 12.5px; }
+
+/* Troubleshooting */
+details.tb { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+details.tb summary { cursor: pointer; padding: 14px 0; font-family: var(--font-display); font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); }
+details.tb summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tbgrid { display: grid; gap: 12px; padding-bottom: 14px; }
+.tbcard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.tbcard.hit { border: 2px solid var(--tell); }
+.tbcard h3 { margin: 0 0 4px; font-size: 16px; }
+.tbcard p { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+.tbcard ul { margin: 0; padding-left: 20px; font-size: 14.5px; display: grid; gap: 3px; }
+.foot { font-size: 13px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.ready { display: grid; gap: 6px; }
+.ready h3 { margin: 4px 0 0; font-size: 15px; }
+.ready .item { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; min-height: 40px; }
+.ready .item input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--navy); }
+.ready .auto { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; }
+.ready .auto .mark { flex: none; width: 22px; text-align: center; font-weight: 700; }
+.ready .auto.ok .mark { color: var(--ok); } .ready .auto.no .mark { color: var(--tell); } .ready .auto.na .mark { color: var(--muted); }
+.sources { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; }
+.sources h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: .07em; color: var(--accent); }
+.sources ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 13.5px; }
+.sources li { min-width: 0; overflow-wrap: anywhere; }
+.sources .use { display: block; color: var(--muted); font-size: 12.5px; }
+.sources a { color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .chk { transition: background-color .2s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <img src="icon-192.png" alt="">
+    <div><h1>Vent Check</h1><p>Lung-protective numbers at the bedside</p></div>
+    <span class="spacer"></span>
+    <button type="button" id="clearBtn">Clear</button>
+  </header>
+
+  <p class="example" id="exampleNote">Example values from a made-up patient are filled in. Tap Clear to start your own.</p>
+
+  <div class="dope" role="note" aria-label="Crashing patient">
+    <h2>Crashing on the vent? DOPE</h2>
+    <p class="act">Take the patient off the vent, bag with 100% O₂, and call RT and the provider now.</p>
+    <dl>
+      <dt>D</dt><dd>Displacement: tube out or in one lung. Check depth, chest rise, EtCO₂.</dd>
+      <dt>O</dt><dd>Obstruction: secretions, kink, biting. Suction, check the tube.</dd>
+      <dt>P</dt><dd>Pneumothorax: uneven breath sounds, rising pressures, falling BP.</dd>
+      <dt>E</dt><dd>Equipment: vent, circuit, O₂ supply. Bagging fixes it if this is the cause.</dd>
+    </dl>
+  </div>
+
+  <div class="summary" aria-live="polite">
+    <h2>Prompts to tell RT and the provider</h2>
+    <ul id="summaryList"></ul>
+  </div>
+
+  <section class="panel" aria-labelledby="h-pt">
+    <h2 id="h-pt">Patient <small>for predicted body weight</small></h2>
+    <div class="row">
+      <span class="grp"><span class="lbl">Sex</span>
+      <span class="seg" role="group" aria-label="Sex">
+        <button type="button" id="sexM" aria-pressed="true">Male</button>
+        <button type="button" id="sexF" aria-pressed="false">Female</button>
+      </span></span>
+      <span class="grp"><span class="lbl">Height</span>
+      <span class="seg" role="group" aria-label="Height units">
+        <button type="button" id="unitFt" aria-pressed="false">ft / in</button>
+        <button type="button" id="unitCm" aria-pressed="true">cm</button>
+        <button type="button" id="unitM" aria-pressed="false">m</button>
+      </span></span>
+    </div>
+    <div class="fields">
+      <div class="field" id="cmWrap"><label for="hCm">Height <span class="u">cm</span></label><input id="hCm" type="number" inputmode="decimal" min="100" max="230"></div>
+      <div class="field" id="mWrap" hidden><label for="hM">Height <span class="u">m</span></label><input id="hM" type="number" inputmode="decimal" step="0.01" min="1" max="2.3"></div>
+      <div class="field" id="ftWrap" hidden><label for="hFt">Height <span class="u">ft / in</span></label>
+        <div class="pair"><input id="hFt" type="number" inputmode="numeric" min="3" max="7" aria-label="feet"><input id="hIn" type="number" inputmode="decimal" min="0" max="11.9" aria-label="inches"></div></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-vent">
+    <h2 id="h-vent">Vent <small>settings and pressures</small></h2>
+    <div class="fields">
+      <div class="field"><label for="vt">Vₜ <span class="u">mL</span></label><input id="vt" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="rr">RR total <span class="u">/min</span></label><input id="rr" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="peep">PEEP <span class="u">cmH₂O</span></label><input id="peep" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="pplat">Plateau <span class="u">cmH₂O</span></label><input id="pplat" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="pip">PIP <span class="u">cmH₂O</span></label><input id="pip" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="fio2">FiO₂ <span class="u">%</span></label><input id="fio2" type="number" inputmode="decimal" min="21" max="100"></div>
+      <div class="field opt"><label for="pipUsual">Usual PIP</label><input id="pipUsual" type="number" inputmode="decimal"></div>
+      <div class="field opt"><label for="peepLast">Last PEEP</label><input id="peepLast" type="number" inputmode="decimal"></div>
+      <div class="field opt"><label for="compLast">Last compliance</label><input id="compLast" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="out" id="outVent"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-ox">
+    <h2 id="h-ox">Oxygenation and gas</h2>
+    <div class="fields">
+      <div class="field"><label for="pao2">PaO₂ <span class="u">mmHg</span></label><input id="pao2" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="spo2">SpO₂ <span class="u">%</span></label><input id="spo2" type="number" inputmode="decimal" min="50" max="100"></div>
+      <div class="field"><label for="ph">pH</label><input id="ph" type="number" inputmode="decimal" step="0.01" min="6.8" max="7.8"></div>
+      <div class="field"><label for="paco2">PaCO₂ <span class="u">mmHg</span></label><input id="paco2" type="number" inputmode="decimal"></div>
+      <div class="field opt"><label for="paco2Last">Last PaCO₂</label><input id="paco2Last" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="out" id="outOx"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-tube">
+    <h2 id="h-tube">Tube</h2>
+    <div class="fields">
+      <div class="field"><label for="cuff">Cuff pressure <span class="u">cmH₂O</span></label><input id="cuff" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="ettDoc">ETT documented <span class="u">cm</span></label><input id="ettDoc" type="number" inputmode="decimal"></div>
+      <div class="field"><label for="ettNow">ETT now <span class="u">cm</span></label><input id="ettNow" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="out" id="outTube"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-wean">
+    <h2 id="h-wean">Weaning <small>RSBI uses RR and Vₜ above</small></h2>
+    <div class="ready" id="ready">
+      <h3>SAT and SBT readiness</h3>
+      <p class="note">The first line fills in from the numbers above; tick the rest at the bedside.</p>
+      <div class="auto na" id="autoOx"><span class="mark">–</span><span id="autoOxText">Oxygenation: FiO₂ ≤50% and PEEP ≤8 (SpO₂ ≥88%)</span></div>
+      <label class="item" for="rdHemo"><input type="checkbox" id="rdHemo"> Hemodynamically stable, no rising pressors</label>
+      <label class="item" for="rdAwake"><input type="checkbox" id="rdAwake"> Awake enough or follows commands (SAT passed)</label>
+      <label class="item" for="rdCough"><input type="checkbox" id="rdCough"> Good cough</label>
+      <label class="item" for="rdSecr"><input type="checkbox" id="rdSecr"> Secretions manageable</label>
+      <label class="item" for="rdNew"><input type="checkbox" id="rdNew"> No new problems (no active ischemia, raised ICP, new instability or procedure)</label>
+    </div>
+    <div class="out" id="outReady"></div>
+    <label class="check" for="minSup"><input type="checkbox" id="minSup"> On minimal support now (CPAP or PS 5/5, or T-piece)</label>
+    <div class="out" id="outWean"></div>
+    <p class="note">RSBI is one data point, not the gatekeeper: using it routinely to decide on a breathing trial delayed weaning in a randomized trial. The daily SBT itself is the test.</p>
+  </section>
+
+  <details class="tb" id="tb">
+    <summary>Pressure troubleshooting</summary>
+    <div class="tbgrid">
+      <div class="tbcard" id="tbAirway">
+        <h3>High PIP, normal plateau</h3>
+        <p>An airway problem: something is resisting flow. PIP − plateau is usually under 10.</p>
+        <ul>
+          <li>Secretions: suction.</li>
+          <li>Kinked tube or biting: check the tubing; bite block or sedation per order.</li>
+          <li>Bronchospasm: listen for wheezing; the provider may order a bronchodilator.</li>
+          <li>Water in the circuit: drain it away from the patient.</li>
+        </ul>
+      </div>
+      <div class="tbcard" id="tbLung">
+        <h3>High PIP and high plateau</h3>
+        <p>The lungs or chest got stiffer.</p>
+        <ul>
+          <li>Pneumothorax: sudden change, uneven breath sounds, falling BP. Urgent.</li>
+          <li>Tube in the right mainstem: check ETT depth and chest rise.</li>
+          <li>Worsening ARDS or pulmonary edema.</li>
+          <li>Tight abdomen: check bladder pressure (IAP).</li>
+          <li>Air trapping or fighting the vent.</li>
+        </ul>
+      </div>
+      <div class="tbcard" id="tbLeak">
+        <h3>Sudden low PIP</h3>
+        <p>Usually a leak: the vent can't build pressure.</p>
+        <ul>
+          <li>Circuit disconnected.</li>
+          <li>Cuff leak: check cuff pressure.</li>
+          <li>Tube pulled back or out: check depth and EtCO₂.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <section class="sources" aria-labelledby="h-src">
+    <h2 id="h-src">Sources</h2>
+    <p class="note">Last reviewed October 31, 2026. Titles, journals, years and the numbers each source supports were checked online; a source without a DOI link can be found by its title.</p>
+    <ol>
+      <li>Acute Respiratory Distress Syndrome Network. Ventilation with lower tidal volumes as compared with traditional tidal volumes for acute lung injury and the acute respiratory distress syndrome. <i>N Engl J Med</i>. 2000;342(18):1301-1308. <a href="https://doi.org/10.1056/NEJM200005043421801" target="_blank" rel="noopener">doi:10.1056/NEJM200005043421801</a><span class="use">PBW, 6 mL/kg target, plateau ≤30</span></li>
+      <li>Amato MBP, Meade MO, Slutsky AS, et al. Driving pressure and survival in the acute respiratory distress syndrome. <i>N Engl J Med</i>. 2015;372(8):747-755. <a href="https://doi.org/10.1056/NEJMsa1410639" target="_blank" rel="noopener">doi:10.1056/NEJMsa1410639</a><span class="use">Driving pressure (plateau − PEEP); 15 is the commonly used cutoff</span></li>
+      <li>ARDS Definition Task Force; Ranieri VM, Rubenfeld GD, Thompson BT, et al. Acute respiratory distress syndrome: the Berlin Definition. <i>JAMA</i>. 2012;307(23):2526-2533. <a href="https://doi.org/10.1001/jama.2012.5669" target="_blank" rel="noopener">doi:10.1001/jama.2012.5669</a><span class="use">P/F severity: mild 201–300, moderate 101–200, severe ≤100</span></li>
+      <li>Matthay MA, Arabi Y, Arroliga AC, et al. A new global definition of acute respiratory distress syndrome. <i>Am J Respir Crit Care Med</i>. 2024;209(1):37-47.<span class="use">S/F cutoffs (315 / 235 / 148) when SpO₂ is ≤97%</span></li>
+      <li>Rice TW, Wheeler AP, Bernard GR, et al. Comparison of the SpO2/FIO2 ratio and the PaO2/FIO2 ratio in patients with acute lung injury or ARDS. <i>Chest</i>. 2007;132(2):410-417.<span class="use">S/F 235 ≈ P/F 200; S/F 315 ≈ P/F 300</span></li>
+      <li>Yang KL, Tobin MJ. A prospective study of indexes predicting the outcome of trials of weaning from mechanical ventilation. <i>N Engl J Med</i>. 1991;324(21):1445-1450.<span class="use">RSBI (RR ÷ Vₜ in liters), 105 cutoff</span></li>
+      <li>Tanios MA, Nevins ML, Hendra KP, et al. A randomized, controlled trial of the role of weaning predictors in clinical decision making. <i>Crit Care Med</i>. 2006;34(10):2530-2535. <a href="https://doi.org/10.1097/01.CCM.0000236546.98861.25" target="_blank" rel="noopener">doi:10.1097/01.CCM.0000236546.98861.25</a><span class="use">RSBI as one data point, not the gatekeeper</span></li>
+      <li>Girard TD, Kress JP, Fuchs BD, et al. Efficacy and safety of a paired sedation and ventilator weaning protocol for mechanically ventilated patients in intensive care (Awakening and Breathing Controlled trial): a randomised controlled trial. <i>Lancet</i>. 2008;371(9607):126-134. <a href="https://doi.org/10.1016/S0140-6736(08)60105-1" target="_blank" rel="noopener">doi:10.1016/S0140-6736(08)60105-1</a><span class="use">SAT and SBT screens</span></li>
+      <li>Agency for Healthcare Research and Quality. Coordinated spontaneous awakening and breathing trials protocol. AHRQ Safety Program for Mechanically Ventilated Patients. Reviewed January 2017. Accessed October 31, 2026. <a href="https://www.ahrq.gov/hai/tools/mvp/modules/technical/sat-sbt-protocol.html" target="_blank" rel="noopener">ahrq.gov</a><span class="use">SAT and SBT safety screens: oxygenation (SpO₂, FiO₂, PEEP), pressors, ischemia, ICP</span></li>
+      <li>Seegobin RD, van Hasselt GL. Endotracheal cuff pressure and tracheal mucosal blood flow: endoscopic study of effects of four large volume cuffs. <i>Br Med J (Clin Res Ed)</i>. 1984;288(6422):965-968.<span class="use">Cuff pressure ceiling of 30 cmH₂O</span></li>
+      <li>Rouzé A, Jaillette E, Nseir S. Continuous control of tracheal cuff pressure: an effective measure to prevent ventilator-associated pneumonia? <i>Crit Care</i>. 2014;18(5):512. <a href="https://doi.org/10.1186/s13054-014-0512-2" target="_blank" rel="noopener">doi:10.1186/s13054-014-0512-2</a><span class="use">Cuff 20–30 cmH₂O; under 20 raises aspiration and VAP risk</span></li>
+      <li>Kleinman ME, Chameides L, Schexnayder SM, et al. Part 14: pediatric advanced life support: 2010 American Heart Association Guidelines for Cardiopulmonary Resuscitation and Emergency Cardiovascular Care. <i>Circulation</i>. 2010;122(18 suppl 3):S876-S908. <a href="https://doi.org/10.1161/CIRCULATIONAHA.110.971101" target="_blank" rel="noopener">doi:10.1161/CIRCULATIONAHA.110.971101</a><span class="use">DOPE for an intubated patient who deteriorates (adopted widely in adult care)</span></li>
+    </ol>
+  </section>
+
+  <p class="foot">The flags are prompts to tell RT and the provider, not orders. Your unit's protocols, the provider's orders and RT's assessment decide what changes. Nothing you type here is saved or sent anywhere. Version 2026-10-31.1.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { sex: "M", unit: "cm" };
+  var EXAMPLE = { hCm: 175, vt: 430, rr: 22, peep: 10, pplat: 24, pip: 28, fio2: 50, pipUsual: 27, peepLast: 10, compLast: 33,
+                  pao2: 72, spo2: 94, ph: 7.31, paco2: 38, paco2Last: 36, cuff: 25, ettDoc: 24, ettNow: 24 };
+  var IDS = ["hCm", "hM", "hFt", "hIn", "compLast", "vt", "rr", "peep", "pplat", "pip", "fio2", "pipUsual", "peepLast", "pao2", "spo2", "ph", "paco2", "paco2Last", "cuff", "ettDoc", "ettNow"];
+
+  function num(id) { var v = $(id).value.trim(); if (v === "") return null; var n = parseFloat(v); return isFinite(n) ? n : null; }
+  function fmt(n, d) { return n.toFixed(d === undefined ? 0 : d); }
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+  var LABEL = { ok: "OK", watch: "Watch", tell: "Tell RT + provider", info: "Info" };
+
+  function card(level, name, val, msg) {
+    return '<div class="chk ' + level + '"><span class="name">' + esc(name) + ' <span class="pill ' + level + '">' + LABEL[level] + '</span></span>' +
+      '<span class="val">' + esc(val) + '</span><span class="msg">' + msg + '</span></div>';
+  }
+
+  function heightCm() {
+    if (state.unit === "cm") { var c = num("hCm"); return c !== null && c > 0 && c <= 3 ? c * 100 : c; }   // 1.75 typed in cm = meters
+    if (state.unit === "m") { var m = num("hM"); return m === null ? null : (m > 3 ? m : m * 100); }
+    var ft = num("hFt"), inch = num("hIn");
+    if (ft === null && inch === null) return null;
+    return ((ft || 0) * 12 + (inch || 0)) * 2.54;
+  }
+
+  function compute() {
+    var flags = [];
+    function push(level, text) { if (level === "tell" || level === "watch") flags.push({ level: level, text: text }); }
+    var out = { vent: [], ox: [], tube: [], wean: [] };
+
+    // ---- PBW and Vt per kg
+    var h = heightCm(), vt = num("vt"), rr = num("rr"), peep = num("peep"), pplat = num("pplat"), pip = num("pip"),
+        fio2 = num("fio2"), pipUsual = num("pipUsual"), peepLast = num("peepLast");
+    var pbw = null;
+    if (h !== null && h > 0) {
+      pbw = (state.sex === "M" ? 50 : 45.5) + 0.91 * (h - 152.4);
+      var inches = h / 2.54, ftPart = Math.floor(inches / 12), inPart = Math.round(inches - ftPart * 12);
+      if (inPart === 12) { ftPart += 1; inPart = 0; }
+      out.vent.push(card("info", "Predicted body weight", fmt(pbw, 1) + " kg",
+        '<span class="formula">' + (state.sex === "M" ? "Men" : "Women") + ': <code>' + (state.sex === "M" ? "50" : "45.5") + ' + 0.91 × (' + fmt(h, 0) + ' cm − 152.4)</code> · ' +
+        ftPart + "′" + inPart + "″ · from height and sex, not actual weight" +
+        (state.unit === "cm" && num("hCm") !== null && num("hCm") <= 3 ? " · " + num("hCm") + " read as meters" : "") + "</span>"));
+    } else {
+      out.vent.push(card("info", "Predicted body weight", "—", "Enter height to get PBW and mL/kg."));
+    }
+    if (pbw && vt) {
+      var mlkg = vt / pbw, lvl, msg;
+      if (mlkg > 8) { lvl = "tell"; msg = "Over 8 mL/kg: risk of overstretching the lungs (volutrauma). 6–8 at " + fmt(pbw, 0) + " kg is " + fmt(6 * pbw) + "–" + fmt(8 * pbw) + " mL."; push(lvl, "Vₜ " + fmt(mlkg, 1) + " mL/kg (over 8)"); }
+      else if (mlkg < 4) { lvl = "tell"; msg = "Under 4 mL/kg: very low volume. Watch pH, PaCO₂ and comfort."; push(lvl, "Vₜ " + fmt(mlkg, 1) + " mL/kg (under 4)"); }
+      else if (mlkg < 6) { lvl = "watch"; msg = "Under 6 mL/kg: sometimes the plan in ARDS when the plateau stays high. Watch pH, PaCO₂ and air hunger."; push(lvl, "Vₜ " + fmt(mlkg, 1) + " mL/kg (under 6)"); }
+      else { lvl = "ok"; msg = "Within 6–8 mL/kg (lung-protective)."; }
+      out.vent.push(card(lvl, "Vₜ per kg PBW", fmt(mlkg, 1) + " mL/kg", msg));
+    }
+
+    // ---- Plateau, driving pressure
+    if (pplat !== null) {
+      if (pplat > 30) { out.vent.push(card("tell", "Plateau pressure", fmt(pplat) + " cmH₂O", "Over 30: alveoli are overdistended. Tell RT and the provider.")); push("tell", "Plateau " + fmt(pplat) + " (over 30)"); }
+      else out.vent.push(card("ok", "Plateau pressure", fmt(pplat) + " cmH₂O", "30 or less."));
+    }
+    if (pplat !== null && peep !== null) {
+      var dp = pplat - peep;
+      if (dp > 15) { out.vent.push(card("tell", "Driving pressure", fmt(dp) + " cmH₂O", "Plateau − PEEP over 15: linked to higher ARDS mortality. Tell RT and the provider.")); push("tell", "Driving pressure " + fmt(dp) + " (over 15)"); }
+      else out.vent.push(card("ok", "Driving pressure", fmt(dp) + " cmH₂O", "Plateau − PEEP is 15 or less."));
+    }
+
+    // ---- Static compliance
+    var compLast = num("compLast"), compTell = false;
+    if (vt && pplat !== null && peep !== null) {
+      if (pplat - peep <= 0) out.vent.push(card("info", "Static compliance", "—", "Plateau must be higher than PEEP to calculate it. Recheck the numbers."));
+      else {
+        var cst = vt / (pplat - peep), lc = "info", mc = [];
+        mc.push("Vₜ ÷ (plateau − PEEP). Roughly 50–100 in healthy ventilated lungs; often under 40 in ARDS. The trend matters more than one value.");
+        if (cst < 30) { lc = "watch"; mc.unshift("Under 30: very stiff lungs or chest."); push("watch", "Compliance " + fmt(cst) + " (under 30)"); }
+        if (compLast !== null && compLast > 0) {
+          var drop = (compLast - cst) / compLast;
+          if (drop >= 0.2) { lc = "tell"; mc.unshift("Down " + fmt(drop * 100) + "% from " + fmt(compLast) + ": the lungs or chest got stiffer. Look for the causes under High PIP and high plateau."); push("tell", "Compliance falling " + fmt(compLast) + " → " + fmt(cst)); }
+          else if (drop >= 0.1) { if (lc !== "tell") lc = "watch"; mc.unshift("Down " + fmt(drop * 100) + "% from " + fmt(compLast) + ": trending stiffer."); push("watch", "Compliance down " + fmt(compLast) + " → " + fmt(cst)); }
+          else if (lc === "info") { lc = "ok"; mc.unshift("Not falling (last " + fmt(compLast) + ")."); }
+        }
+        out.vent.push(card(lc, "Static compliance", fmt(cst) + " mL/cmH₂O", mc.join(" ")));
+        if (lc === "tell") compTell = true;
+      }
+    }
+
+    // ---- PIP vs plateau pattern
+    var hitAirway = false, hitLung = false, hitLeak = false;
+    if (pip !== null) {
+      var parts = [], lvl2 = "ok";
+      if (pplat !== null) {
+        var gap = pip - pplat;
+        if (gap > 10) { hitAirway = true; lvl2 = "watch"; parts.push("PIP − plateau is " + fmt(gap) + " (over 10): airway resistance pattern. See troubleshooting."); push("watch", "PIP − plateau " + fmt(gap) + ": airway pattern"); }
+        if (pplat > 30) { hitLung = true; lvl2 = "tell"; parts.push("Plateau is high too: stiff lung or chest pattern. See troubleshooting."); }
+        if (!parts.length) parts.push("PIP − plateau is " + fmt(gap) + ": no airway resistance pattern.");
+      }
+      if (pipUsual !== null) {
+        var d = pip - pipUsual;
+        if (d <= -5) { hitLeak = true; lvl2 = "tell"; parts.push("PIP is " + fmt(-d) + " below usual. If the drop was sudden, look for a leak or disconnect."); push("tell", "PIP down " + fmt(-d) + " from usual: check for a leak"); }
+        else if (d >= 5) { if (lvl2 === "ok") lvl2 = "watch"; parts.push("PIP is " + fmt(d) + " above usual. Use the plateau to tell airway from lung."); push("watch", "PIP up " + fmt(d) + " from usual"); }
+      }
+      if (!parts.length) parts.push("Add the plateau or the usual PIP to compare.");
+      out.vent.push(card(lvl2, "PIP", fmt(pip) + " cmH₂O", parts.join(" ")));
+    }
+    $("tbAirway").classList.toggle("hit", hitAirway);
+    $("tbLung").classList.toggle("hit", hitLung || compTell);
+    $("tbLeak").classList.toggle("hit", hitLeak);
+    if (hitAirway || hitLung || hitLeak || compTell) $("tb").open = true;
+
+    // ---- Oxygen need
+    if (fio2 !== null) {
+      var o = [], lv = "ok";
+      if (fio2 > 60) { lv = "tell"; o.push("FiO₂ over 60%: high oxygen need."); push("tell", "FiO₂ " + fmt(fio2) + "% (over 60)"); }
+      if (peep !== null && peepLast !== null && peep > peepLast) { if (lv === "ok") lv = "watch"; o.push("PEEP climbing (" + fmt(peepLast) + " → " + fmt(peep) + "): oxygenation is getting worse."); push("watch", "PEEP up " + fmt(peepLast) + " → " + fmt(peep)); }
+      if (!o.length) o.push("FiO₂ 60% or less" + (peepLast !== null && peep !== null ? ", PEEP not climbing." : "."));
+      out.vent.push(card(lv, "Oxygen need", "FiO₂ " + fmt(fio2) + "%", o.join(" ")));
+    }
+
+    // ---- P/F and S/F
+    var pao2 = num("pao2"), spo2 = num("spo2"), ph = num("ph"), paco2 = num("paco2"), paco2Last = num("paco2Last");
+    var F = fio2 !== null && fio2 >= 21 ? fio2 / 100 : null;
+    if (pao2 !== null && F) {
+      var pf = pao2 / F, l3, m3;
+      if (pf <= 100) { l3 = "tell"; m3 = "100 or less: severe ARDS range."; }
+      else if (pf <= 200) { l3 = "tell"; m3 = "101–200: moderate ARDS range."; }
+      else if (pf <= 300) { l3 = "watch"; m3 = "201–300: mild ARDS range."; }
+      else { l3 = "ok"; m3 = "Over 300: not in the ARDS range."; }
+      if (pf < 150 && F >= 0.6) m3 += " Under 150 on FiO₂ ≥60%: the range where proning is considered (provider decision).";
+      m3 += " A range, not a diagnosis: ARDS also needs bilateral infiltrates not explained by the heart.";
+      out.ox.push(card(l3, "P/F ratio", fmt(pf), m3));
+      if (l3 !== "ok") push(l3, "P/F " + fmt(pf));
+    } else if (spo2 !== null && F) {
+      if (spo2 > 97) out.ox.push(card("info", "S/F ratio", "—", "SpO₂ over 97% makes S/F unreliable. Use a blood gas, or recheck at a lower FiO₂ if ordered."));
+      else {
+        var sf = spo2 / F, l4, m4;
+        if (sf <= 148) { l4 = "tell"; m4 = "148 or less: severe range (about P/F 100)."; }
+        else if (sf <= 235) { l4 = "tell"; m4 = "149–235: moderate range (about P/F 200)."; }
+        else if (sf <= 315) { l4 = "watch"; m4 = "236–315: mild range (about P/F 300)."; }
+        else { l4 = "ok"; m4 = "Over 315: not in the ARDS range."; }
+        out.ox.push(card(l4, "S/F ratio (no blood gas)", fmt(sf), m4 + " Estimate only; valid when SpO₂ is 97% or less."));
+        if (l4 !== "ok") push(l4, "S/F " + fmt(sf));
+      }
+    } else {
+      out.ox.push(card("info", "P/F ratio", "—", "Enter FiO₂ (in Vent) with a PaO₂, or with an SpO₂ for the S/F estimate."));
+    }
+
+    // ---- Blood gas
+    if (ph !== null || paco2 !== null) {
+      var g = [], lg = "ok";
+      if (ph !== null) {
+        if (ph < 7.30) { lg = "tell"; g.push("pH under 7.30: acidemia."); push("tell", "pH " + fmt(ph, 2) + " (under 7.30)"); }
+        else if (ph < 7.35) { lg = "watch"; g.push("pH 7.30–7.34: mild acidemia."); }
+        else if (ph > 7.45) { lg = "watch"; g.push("pH over 7.45: alkalemia (overventilation?)."); push("watch", "pH " + fmt(ph, 2) + " (over 7.45)"); }
+        else g.push("pH 7.35–7.45.");
+      }
+      if (paco2 !== null) {
+        if (paco2Last !== null && paco2 - paco2Last >= 5) { lg = "tell"; g.push("PaCO₂ rising (" + fmt(paco2Last) + " → " + fmt(paco2) + "): ventilation is getting worse."); push("tell", "PaCO₂ rising " + fmt(paco2Last) + " → " + fmt(paco2)); }
+        else if (paco2 > 45 && ph !== null && ph < 7.35) { if (lg === "ok") lg = "watch"; g.push("PaCO₂ over 45 with a low pH: respiratory acidosis."); }
+        if (ph !== null && ph < 7.35 && paco2 <= 45) g.push("CO₂ isn't high, so the acidosis is likely metabolic (lactate, AKI, DKA).");
+      }
+      if (lg !== "ok" && paco2 !== null && paco2 > 45) g.push("In ARDS, a higher CO₂ is sometimes allowed on purpose; confirm the goals.");
+      out.ox.push(card(lg, "Blood gas", (ph !== null ? fmt(ph, 2) : "—") + " / " + (paco2 !== null ? fmt(paco2) : "—"), g.join(" ")));
+    }
+
+    // ---- Tube
+    var cuff = num("cuff"), ettDoc = num("ettDoc"), ettNow = num("ettNow");
+    if (cuff !== null) {
+      if (cuff < 20) { out.tube.push(card("tell", "Cuff pressure", fmt(cuff) + " cmH₂O", "Under 20: leak and aspiration risk (VAP). Tell RT.")); push("tell", "Cuff " + fmt(cuff) + " (under 20)"); }
+      else if (cuff > 30) { out.tube.push(card("tell", "Cuff pressure", fmt(cuff) + " cmH₂O", "Over 30: can injure the tracheal lining. Tell RT.")); push("tell", "Cuff " + fmt(cuff) + " (over 30)"); }
+      else out.tube.push(card("ok", "Cuff pressure", fmt(cuff) + " cmH₂O", "Within 20–30."));
+    }
+    if (ettDoc !== null && ettNow !== null) {
+      var mv = ettNow - ettDoc, a = Math.abs(mv);
+      var dir = mv > 0 ? "deeper (right mainstem risk)" : "shallower (extubation risk)";
+      if (a >= 2) { out.tube.push(card("tell", "ETT depth", (mv > 0 ? "+" : "") + fmt(mv, 1) + " cm", "Moved " + fmt(a, 1) + " cm " + dir + ". Check breath sounds, chest rise and EtCO₂; tell RT and the provider (often a chest X-ray).")); push("tell", "ETT moved " + fmt(a, 1) + " cm " + (mv > 0 ? "deeper" : "out")); }
+      else if (a >= 1) { out.tube.push(card("watch", "ETT depth", (mv > 0 ? "+" : "") + fmt(mv, 1) + " cm", "Moved " + fmt(a, 1) + " cm " + dir + ". Recheck the mark and the securing device.")); push("watch", "ETT moved " + fmt(a, 1) + " cm"); }
+      else out.tube.push(card("ok", "ETT depth", "± 0 cm", "Same as documented (" + fmt(ettNow, 1) + " cm)."));
+    }
+    if (!out.tube.length) out.tube.push(card("info", "Tube", "—", "Enter cuff pressure and ETT depth to check them."));
+
+    // ---- RSBI
+    if (rr !== null && vt) {
+      var rsbi = rr / (vt / 1000), minSup = $("minSup").checked;
+      var l5 = !minSup ? "info" : (rsbi < 105 ? "ok" : "watch");
+      out.wean.push(card(l5, "RSBI", fmt(rsbi), !minSup
+        ? "Check the box once the patient is on minimal support. On full vent settings the RR and Vₜ are the machine's, so RSBI means little."
+        : (rsbi < 105 ? "Under 105 favors passing the breathing trial." : "105 or more predicts a failed breathing trial. Tell RT before the SBT goes on.")));
+      if (minSup && rsbi >= 105) push("watch", "RSBI " + fmt(rsbi) + " (105 or more)");
+    } else out.wean.push(card("info", "RSBI", "—", "Enter RR and Vₜ in Vent. RSBI = RR ÷ Vₜ in liters."));
+
+    $("outVent").innerHTML = out.vent.join("");
+    $("outOx").innerHTML = out.ox.join("");
+    $("outTube").innerHTML = out.tube.join("");
+    $("outWean").innerHTML = out.wean.join("");
+
+    // ---- SAT / SBT readiness
+    var ao = $("autoOx"), aot = $("autoOxText"), oxOk = null;
+    if (fio2 !== null && peep !== null) {
+      var spo2r = num("spo2");
+      oxOk = fio2 <= 50 && peep <= 8 && (spo2r === null || spo2r >= 88);
+      aot.textContent = "Oxygenation: FiO₂ " + fmt(fio2) + "% (≤50), PEEP " + fmt(peep) + " (≤8)" + (spo2r !== null ? ", SpO₂ " + fmt(spo2r) + "% (≥88)" : "");
+    } else aot.textContent = "Oxygenation: FiO₂ ≤50% and PEEP ≤8 (SpO₂ ≥88%). Enter FiO₂ and PEEP above.";
+    ao.className = "auto " + (oxOk === null ? "na" : oxOk ? "ok" : "no");
+    ao.querySelector(".mark").textContent = oxOk === null ? "–" : oxOk ? "✓" : "✗";
+    var manual = ["rdHemo", "rdAwake", "rdCough", "rdSecr", "rdNew"], ticked = manual.filter(function (id) { return $(id).checked; }).length;
+    var rmsg, rl;
+    if (oxOk === false) { rl = "watch"; rmsg = "Oxygen needs are still too high for a breathing trial. Some protocols use FiO₂ ≤40%; Reston's ABCDEF policy may use PEEP ≤7.5 (confirm)."; }
+    else if (oxOk === true && ticked === manual.length) { rl = "ok"; rmsg = "Screen passes: tell RT the patient looks ready for the SBT per protocol. RT and the provider decide."; }
+    else { rl = "info"; rmsg = (manual.length - ticked) + " of " + manual.length + " bedside items not ticked yet" + (oxOk === null ? ", and oxygenation not entered" : "") + "."; }
+    $("outReady").innerHTML = card(rl, "Readiness screen", (ticked + (oxOk ? 1 : 0)) + " / 6", rmsg);
+
+    flags.sort(function (x, y) { return (x.level === "tell" ? 0 : 1) - (y.level === "tell" ? 0 : 1); });
+    $("summaryList").innerHTML = flags.length ? flags.map(function (f) {
+      return '<li><span class="pill ' + f.level + '">' + LABEL[f.level] + '</span><span>' + esc(f.text) + '</span></li>';
+    }).join("") : '<li class="none">Nothing flagged from the numbers entered.</li>';
+  }
+
+  function setSex(s) { state.sex = s; $("sexM").setAttribute("aria-pressed", s === "M"); $("sexF").setAttribute("aria-pressed", s === "F"); compute(); }
+  function setUnit(u) {
+    var h = heightCm();
+    state.unit = u;
+    $("unitCm").setAttribute("aria-pressed", u === "cm"); $("unitFt").setAttribute("aria-pressed", u === "ft"); $("unitM").setAttribute("aria-pressed", u === "m");
+    $("cmWrap").hidden = u !== "cm"; $("ftWrap").hidden = u !== "ft"; $("mWrap").hidden = u !== "m";
+    if (h !== null) {
+      if (u === "cm") $("hCm").value = Math.round(h);
+      else if (u === "m") $("hM").value = (h / 100).toFixed(2);
+      else { var inch = h / 2.54, f = Math.floor(inch / 12), i = Math.round(inch - f * 12); if (i === 12) { f++; i = 0; } $("hFt").value = f; $("hIn").value = i; }
+    }
+    try { localStorage.setItem("ventcheck-unit", u); } catch (e) {}
+    compute();
+  }
+  $("sexM").addEventListener("click", function () { setSex("M"); });
+  $("sexF").addEventListener("click", function () { setSex("F"); });
+  $("unitCm").addEventListener("click", function () { setUnit("cm"); });
+  $("unitFt").addEventListener("click", function () { setUnit("ft"); });
+  $("unitM").addEventListener("click", function () { setUnit("m"); });
+  $("hCm").addEventListener("blur", function () { var c = num("hCm"); if (c !== null && c > 0 && c <= 3) { $("hCm").value = Math.round(c * 100); compute(); } });
+  IDS.forEach(function (id) { $(id).addEventListener("input", function () { $("exampleNote").hidden = true; compute(); }); });
+  $("minSup").addEventListener("change", compute);
+  ["rdHemo", "rdAwake", "rdCough", "rdSecr", "rdNew"].forEach(function (id) { $(id).addEventListener("change", compute); });
+  $("clearBtn").addEventListener("click", function () {
+    IDS.forEach(function (id) { $(id).value = ""; }); $("minSup").checked = false; ["rdHemo", "rdAwake", "rdCough", "rdSecr", "rdNew"].forEach(function (id) { $(id).checked = false; });
+    $("exampleNote").hidden = true; $("tb").open = false; compute();
+    $(state.unit === "cm" ? "hCm" : state.unit === "m" ? "hM" : "hFt").focus();
+  });
+
+  Object.keys(EXAMPLE).forEach(function (k) { $(k).value = EXAMPLE[k]; });
+  var saved = null;
+  try { saved = localStorage.getItem("ventcheck-unit"); } catch (e) {}
+  if (saved === "ft" || saved === "m") setUnit(saved); else compute();
+})();
+</script>
+
+<script>
+  // Offline support: save the app on the phone the first time it loads.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+  }
+</script>
+</body>
+</html>
