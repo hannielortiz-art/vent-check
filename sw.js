@@ -1,5 +1,5 @@
 // Vent Check offline cache. Change VERSION whenever any file changes, so phones fetch the update.
-const VERSION = "vent-check-2026-10-31.2";
+const VERSION = "vent-check-2026-11-01.3";
 const FILES = [
   "./",
   "index.html",
